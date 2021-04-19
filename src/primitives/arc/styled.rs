@@ -1,6 +1,6 @@
 use crate::{
     draw_target::DrawTarget,
-    geometry::Dimensions,
+    geometry::{Dimensions, Angle},
     pixelcolor::PixelColor,
     primitives::{
         arc::Arc,
@@ -31,7 +31,7 @@ impl<C: PixelColor> StyledPixelsIterator<C> {
         let outside_edge = circle.offset(style.outside_stroke_width().saturating_cast());
         let inside_edge = circle.offset(style.inside_stroke_width().saturating_cast_neg());
 
-        let iter = if !style.is_transparent() {
+        let iter = if !style.is_transparent() && primitive.angle_sweep != Angle::zero() {
             // PERF: The distance iterator should use the smaller arc bounding box
             outside_edge.distances()
         } else {
@@ -176,6 +176,32 @@ mod tests {
                 });
             }
         }
+    }
+
+    #[test]
+    fn zero_sweep_odd_diameter() {
+        let style = PrimitiveStyle::with_stroke(BinaryColor::On, 2);
+
+        let mut display = MockDisplay::new();
+        Arc::with_center(Point::new_equal(3), 5, 0.0.deg(), 0.0.deg())
+            .into_styled(style)
+            .draw(&mut display)
+            .unwrap();
+
+        display.assert_pattern(&[]);
+    }
+
+    #[test]
+    fn zero_sweep_even_diameter() {
+        let style = PrimitiveStyle::with_stroke(BinaryColor::On, 2);
+
+        let mut display = MockDisplay::new();
+        Arc::with_center(Point::new_equal(3), 6, 0.0.deg(), 0.0.deg())
+            .into_styled(style)
+            .draw(&mut display)
+            .unwrap();
+
+        display.assert_pattern(&[]);
     }
 
     #[test]
