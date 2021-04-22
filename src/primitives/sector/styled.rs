@@ -8,7 +8,7 @@ use crate::{
             DistanceIterator, LineSide, LinearEquation, PlaneSector, PointType, NORMAL_VECTOR_SCALE,
         },
         styled::{StyledDimensions, StyledDrawable, StyledPixels},
-        PrimitiveStyle, Rectangle, Sector,
+        PrimitiveStyle, Rectangle, Sector, StrokeAlignment,
     },
     Pixel, SaturatingCast,
 };
@@ -51,12 +51,12 @@ impl<C: PixelColor> StyledPixelsIterator<C> {
 
         let plane_sector = PlaneSector::new(stroke_area.angle_start, stroke_area.angle_sweep);
 
-        let stroke_threshold_inside =
-            style.inside_stroke_width().saturating_cast() * NORMAL_VECTOR_SCALE * 2
-                - NORMAL_VECTOR_SCALE;
-        let stroke_threshold_outside =
-            style.outside_stroke_width().saturating_cast() * NORMAL_VECTOR_SCALE * 2
-                + NORMAL_VECTOR_SCALE;
+        let stroke_threshold = style.stroke_width.saturating_cast() * NORMAL_VECTOR_SCALE;
+        let (stroke_threshold_inside, stroke_threshold_outside) = match style.stroke_alignment {
+            StrokeAlignment::Inside => (stroke_threshold * 2, 0),
+            StrokeAlignment::Center => (stroke_threshold, -stroke_threshold),
+            StrokeAlignment::Outside => (0, -stroke_threshold * 2),
+        };
 
         // TODO: Polylines and sectors should use the same miter limit.
         let angle_sweep_abs = primitive.angle_sweep.abs();
@@ -216,7 +216,7 @@ mod tests {
             " ##   ## ", //
             "##     ##", //
             "  ## ##  ", //
-            "    #    ", //
+            "   ###   ", //
         ]);
     }
 
@@ -233,9 +233,9 @@ mod tests {
         display.assert_pattern(&[
             "  ###  ", //
             " ##### ", //
-            "###### ", //
             "#####  ", //
-            "###### ", //
+            "####   ", //
+            "#####  ", //
             " ##### ", //
             "  ###  ", //
         ]);
@@ -601,32 +601,32 @@ mod tests {
 
         display.assert_pattern(&[
             "       R                ",
-            "      RRRRR             ",
-            "      RRRRRRR           ",
+            "       RRRR             ",
+            "       RRRRRR           ",
             "      RRGGRRRRR         ",
             "      RRGGGGRRRR        ",
-            "     RRGGGGGGGRRR       ",
-            "     RRGGGGGGGGRRR      ",
+            "      RRGGGGGGRRR       ",
+            "      RRGGGGGGGRRR      ",
             "     RRGGGGGGGGGRRR     ",
             "     RRGGGGGGGGGGRRR    ",
-            "    RRGGGGGGGGGGGGRRR   ",
-            "    RRGGGGGGGGGGGGGRR   ",
+            "     RRGGGGGGGGGGGRRR   ",
+            "     RRGGGGGGGGGGGGRR   ",
             "    RRGGGGGGGGGGGGGRRR  ",
             "    RRGGGGGGGGGGGGGGRR  ",
-            "   RRGGGGGGGGGGGGGGGRRR ",
-            "   RRGGGGGGGGGGGGGGGGRR ",
+            "    RRGGGGGGGGGGGGGGRRR ",
+            "    RRGGGGGGGGGGGGGGGRR ",
             "   RRGGGGGGGGGGGGGGGGRR ",
             "   RRGGGGGGGGGGGGGGGGRRR",
+            "   RRGGGGGGGGGGGGGGGGGRR",
+            "   RRGGGGGGGGGGGGGGGGGRR",
             "  RRGGGGGGGGGGGGGGGGGGRR",
-            "  RRGGGGGGGGGGGGGGGGGGRR",
-            "  RRGGGGGGGGGGGGGGGGGGRR",
-            "  RRGGGGGGGGGGGGGGGGGGRR",
-            " RRRRRRGGGGGGGGGGGGGGGRR",
-            "   RRRRRRRRGGGGGGGGGGGRR",
-            "       RRRRRRRRGGGGGGGRR",
-            "           RRRRRRRRGGGRR",
-            "               RRRRRRRRR",
-            "                   RRRR ",
+            "  RRRGGGGGGGGGGGGGGGGGRR",
+            "  RRRRRRRGGGGGGGGGGGGGRR",
+            "     RRRRRRRRGGGGGGGGGRR",
+            "         RRRRRRRRGGGGGRR",
+            "             RRRRRRRRGRR",
+            "                 RRRRRRR",
+            "                     RR ",
         ]);
     }
 
@@ -689,5 +689,53 @@ mod tests {
             .into_styled(PrimitiveStyle::with_fill(BinaryColor::On))
             .draw(&mut display)
             .unwrap();
+    }
+
+    #[test]
+    fn quadrant_odd_diameter_even_stroke_width() {
+        let style = PrimitiveStyle::with_stroke(BinaryColor::On, 2);
+
+        let mut display = MockDisplay::new();
+
+        Sector::new(Point::new(-3, 2), 11, 0.0.deg(), 90.0.deg())
+            .into_styled(style)
+            .draw(&mut display)
+            .unwrap();
+
+        display.assert_pattern(&[
+            "         ", //
+            " ####    ", //
+            " ######  ", //
+            " ##  ### ", //
+            " ##   ## ", //
+            " ##    ##", //
+            " ##    ##", //
+            " ########", //
+            " ########", //
+        ]);
+    }
+
+    #[test]
+    fn quadrant_even_diameter_even_stroke_width() {
+        let style = PrimitiveStyle::with_stroke(BinaryColor::On, 2);
+
+        let mut display = MockDisplay::new();
+
+        Sector::new(Point::new(-5, 2), 12, 0.0.deg(), 90.0.deg())
+            .into_styled(style)
+            .draw(&mut display)
+            .unwrap();
+
+        display.assert_pattern(&[
+            "        ", //
+            "####    ", //
+            "#####   ", //
+            "## ###  ", //
+            "##   ## ", //
+            "##   ###", //
+            "##    ##", //
+            "########", //
+            "########", //
+        ]);
     }
 }

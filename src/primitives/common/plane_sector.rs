@@ -88,16 +88,16 @@ impl PlaneSector {
         outside_threshold: i32,
     ) -> Option<PointType> {
         let distance_left = self.half_plane_left.distance(point);
-        let distance_right = self.half_plane_right.distance(point);
+        let distance_right = -self.half_plane_right.distance(point);
 
         if !self.operation.execute(
-            distance_left > -outside_threshold,
-            distance_right < outside_threshold,
+            distance_left >= outside_threshold,
+            distance_right >= outside_threshold,
         ) {
             None
         } else if !self.operation.execute(
             distance_left >= inside_threshold,
-            distance_right <= -inside_threshold,
+            distance_right >= inside_threshold,
         ) {
             Some(PointType::Stroke)
         } else {
@@ -109,7 +109,12 @@ impl PlaneSector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::geometry::AngleUnit;
+    use crate::{
+        geometry::AngleUnit,
+        primitives::{common::NORMAL_VECTOR_SCALE, Line, PointsIter},
+    };
+
+    use arrayvec::ArrayVec;
 
     /// Checks if the plane sector contains 8 different points.
     ///
@@ -180,5 +185,100 @@ mod tests {
             contains(&plane_sector),
             [false, false, false, false, true, true, true, false]
         );
+    }
+
+    fn test_point_type(
+        stroke_width: i32,
+        diameter: i32,
+        sweep_step: f32,
+        expected_types: &[Option<PointType>],
+    ) {
+        assert_eq!(diameter as usize, expected_types.len());
+
+        let threshold = stroke_width * NORMAL_VECTOR_SCALE;
+
+        let center = Point::new(0, diameter - 1);
+
+        for sweep in &[sweep_step, sweep_step * 2.0, sweep_step * 3.0] {
+            let plane_sector = PlaneSector::new(0.0.deg(), sweep.deg());
+
+            let line = Line::new(Point::new(100, 0), Point::new(100, diameter - 1));
+
+            let types = line
+                .points()
+                .map(|point| {
+                    let delta = point * 2 - center;
+                    plane_sector.point_type(delta, threshold, -threshold)
+                })
+                .collect::<ArrayVec<[_; 32]>>();
+
+            assert_eq!(&types, expected_types, "sweep: {}", sweep,);
+        }
+    }
+
+    #[test]
+    fn point_type_1px_odd_diameter() {
+        let mut expected = [
+            Some(PointType::Fill),
+            Some(PointType::Fill),
+            Some(PointType::Stroke),
+            None,
+            None,
+        ];
+
+        test_point_type(1, 5, 90.0, &expected);
+
+        expected.reverse();
+        test_point_type(1, 5, -90.0, &expected);
+    }
+
+    #[test]
+    fn point_type_1px_even_diameter() {
+        let mut expected = [
+            Some(PointType::Fill),
+            Some(PointType::Fill),
+            Some(PointType::Fill),
+            Some(PointType::Stroke),
+            None,
+            None,
+        ];
+
+        test_point_type(1, 6, 90.0, &expected);
+
+        expected.reverse();
+        test_point_type(1, 6, -90.0, &expected);
+    }
+
+    #[test]
+    fn point_type_2px_odd_diameter() {
+        let mut expected = [
+            Some(PointType::Fill),
+            Some(PointType::Fill),
+            Some(PointType::Stroke),
+            Some(PointType::Stroke),
+            None,
+        ];
+
+        test_point_type(2, 5, 90.0, &expected);
+
+        expected.reverse();
+        test_point_type(2, 5, -90.0, &expected);
+    }
+
+    #[test]
+    fn point_type_2px_even_diameter() {
+        let mut expected = [
+            Some(PointType::Fill),
+            Some(PointType::Fill),
+            Some(PointType::Stroke),
+            Some(PointType::Stroke),
+            None,
+            None,
+        ];
+
+        test_point_type(2, 6, 90.0, &expected);
+
+        expected.reverse();
+        test_point_type(2, 6, -90.0, &expected);
     }
 }

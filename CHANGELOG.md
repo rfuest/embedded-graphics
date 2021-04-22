@@ -6,6 +6,11 @@ Embedded Graphics is a `no_std` library for adding graphics features to display 
 
 ## [Unreleased] - ReleaseDate
 
+### Fixed
+
+- [#588](https://github.com/embedded-graphics/embedded-graphics/pull/588) Fixed drawing of arcs with zero sweep angle.
+- [#588](https://github.com/embedded-graphics/embedded-graphics/pull/588) Fixed drawing of radial lines in sectors.
+
 ## [0.7.0-beta.1] - 2021-04-19
 
 ### Added
