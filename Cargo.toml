@@ -27,8 +27,8 @@ all-features = true
 circle-ci = { repository = "embedded-graphics/embedded-graphics", branch = "master" }
 
 [dependencies]
-az = "1.2.0"
-fixed = { version = "1.14.0", optional = true, default-features = false }
+az = "~1.2.0"
+fixed = { version = "~1.29.0", optional = true, default-features = false }
 float-cmp = "0.9.0"
 micromath = { version = "2.0.0", default-features = false }
 embedded-graphics-core = { path = "core", version = "^0.4.0"}
@@ -37,7 +37,8 @@ defmt = { version = "0.3.2", optional = true }
 
 [dev-dependencies]
 arrayvec = { version = "0.7.2", default-features = false }
-criterion = { version = "0.4.0", features = [ "html_reports" ] }
+criterion = { version = "~0.4.0", default-features = false, features = [ "html_reports" ] }
+half = { version = "~2.4.1" } # used by criterion, newer versions cause MSRV build failure
 
 [features]
 default = []
